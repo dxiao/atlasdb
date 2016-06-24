@@ -23,9 +23,9 @@ import org.junit.Test;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.palantir.atlasdb.keyvalue.api.KeyValueService;
-import com.palantir.atlasdb.performance.test.api.PerformanceTest;
-import com.palantir.atlasdb.performance.test.api.ValueGenerator;
-import com.palantir.atlasdb.performance.test.api.annotation.PerfTest;
+import com.palantir.atlasdb.performance.api.PerformanceTest;
+import com.palantir.atlasdb.performance.api.ValueGenerator;
+import com.palantir.atlasdb.performance.api.annotation.PerfTest;
 
 import io.airlift.airline.Cli;
 import io.airlift.airline.Command;
@@ -75,8 +75,18 @@ public class RunTestsCommandTest {
 
     @PerfTest(name = "no-op-test")
     static class NoOpTest implements PerformanceTest {
+
         @Override
-        public void run(KeyValueService kvs, ValueGenerator gen) {
+        public void run() {/* no op */ }
+
+        @Override
+        public int setup(KeyValueService kvs) {
+            return 0;
+        }
+
+        @Override
+        public int tearDown() {
+            return 0;
         }
     }
 }

@@ -13,17 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.palantir.atlasdb.performance.test.api.annotation;
+package com.palantir.atlasdb.performance.api;
 
-import static java.lang.annotation.ElementType.TYPE;
+import java.nio.ByteBuffer;
+import java.util.stream.Stream;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+public interface ValueGenerator {
 
-@Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
-@Target({TYPE})
-public @interface PerfTest {
-
-    String name();
+    Stream<ByteBuffer> stream();
 
 }

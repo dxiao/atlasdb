@@ -13,26 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.palantir.atlasdb.performance.test.generator;
+package com.palantir.atlasdb.performance.utils;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.stream.Stream;
 
-import com.palantir.atlasdb.performance.test.api.ValueGenerator;
+import com.palantir.atlasdb.performance.api.ValueGenerator;
 
 // This is a naive non-configurable implementation of a ValueGenerator.
 // This will be refactored or deleted as we figure out what we want to
 // do with value generation in general.
-public class RandomValueGenerator implements ValueGenerator {
+public class RandomByteBufferGenerator implements ValueGenerator {
 
-    private static final int STREAM_LIMIT = 25;
+    private static final int STREAM_LIMIT = 10000;
     private static final int BYTE_ARRAY_SIZE = 100;
 
     private final Random rand;
 
-    public RandomValueGenerator(Random rand) {
-        this.rand = rand;
+    public static RandomByteBufferGenerator withSeed(long seed) {
+        return new RandomByteBufferGenerator(seed);
+    }
+
+    public RandomByteBufferGenerator(long seed) {
+        this.rand = new Random(seed);
     }
 
     @Override

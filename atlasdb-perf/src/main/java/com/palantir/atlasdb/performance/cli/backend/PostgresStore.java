@@ -39,7 +39,7 @@ public class PostgresStore extends PhysicalStore {
         composition = dockerCompose();
 
         DockerPort port = composition.hostNetworkedPort(POSTGRES_PORT_NUMBER);
-        InetSocketAddress addr = new InetSocketAddress(port.getIp(), port.getExternalPort());
+        InetSocketAddress address = new InetSocketAddress(port.getIp(), port.getExternalPort());
 
         ImmutableConnectionConfig connectionConfig = ImmutableConnectionConfig.builder()
                 .sid("atlas")
@@ -47,9 +47,10 @@ public class PostgresStore extends PhysicalStore {
                 .dbLogin("palantir")
                 .dbPassword("palantir")
                 .dbType(DBType.POSTGRESQL)
-                .host(addr.getHostName())
-                .port(addr.getPort())
+                .host(address.getHostName())
+                .port(address.getPort())
                 .build();
+        
         ImmutablePostgresKeyValueServiceConfig config = ImmutablePostgresKeyValueServiceConfig.builder()
                 .connection(connectionConfig)
                 .build();

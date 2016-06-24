@@ -18,19 +18,20 @@ package com.palantir.atlasdb.performance.cli.command;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.palantir.atlasdb.keyvalue.api.KeyValueService;
+import com.palantir.atlasdb.performance.api.PerformanceTest;
+import com.palantir.atlasdb.performance.api.annotation.PerfTest;
 import com.palantir.atlasdb.performance.cli.backend.PhysicalStore;
 import com.palantir.atlasdb.performance.cli.backend.PhysicalStoreType;
-import com.palantir.atlasdb.performance.test.api.PerformanceTest;
-import com.palantir.atlasdb.performance.test.api.ValueGenerator;
-import com.palantir.atlasdb.performance.test.api.annotation.PerfTest;
-import com.palantir.atlasdb.performance.test.generator.RandomValueGenerator;
+import com.palantir.atlasdb.performance.tests.TestSinglePuts;
 
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
@@ -39,25 +40,19 @@ import io.airlift.airline.Option;
 @Command(name = "run", description = "Run tests")
 public class RunTestsCommand implements Callable<Integer> {
 
-    @Arguments(title = "TESTS",
-            description = "tests to run",
-            required = false)
-    private String tests;
+    Logger metricsLogger = Logger.getLogger("com.palantir.atlasdb.performance.metrics");
 
-    @Option(name = {"-b", "--backend"},
-            title = "PHYSICAL STORE",
-            description = "underyling physical store (e.g. POSTGRES)",
-            required = true)
+    @Arguments(title = "TESTS", description = "tests to run")
+    private String tests = "";
+
+    @Option(name = {"-b", "--backend"}, title = "PHYSICAL STORE", description = "underling physical store (eg POSTGRES)", required = true)
     private PhysicalStoreType type;
 
     private static final Set<Class<? extends PerformanceTest>> ALL_TESTS =
-            ImmutableSet.<Class<? extends PerformanceTest>>builder()
-                    .build();
+            ImmutableSet.<Class<? extends PerformanceTest>>builder().add(TestSinglePuts.class).build();
 
     @Override
     public Integer call() throws Exception {
-        KeyValueService kvs = PhysicalStore.create(type).connect();
-        ValueGenerator gen = new RandomValueGenerator(ThreadLocalRandom.current());
         Set<Class<? extends PerformanceTest>> allTestsClasses = getAllTests();
 
         Set<Class<? extends PerformanceTest>> testsToRun = allTestsClasses.stream()
@@ -68,7 +63,12 @@ public class RunTestsCommand implements Callable<Integer> {
             return 1;
         }
 
-        testsToRun.stream().forEach(testClass -> runTest(testClass, kvs, gen));
+        try (PhysicalStore physicalStore = PhysicalStore.create(type)) {
+            // TODO: something like KeyValueServices.createOn(PhysicalStore store);
+            KeyValueService kvs = physicalStore.connect();
+            testsToRun.stream().forEach(testClass -> runTest(testClass, kvs));
+        }
+
         return 0;
     }
 
@@ -88,9 +88,18 @@ public class RunTestsCommand implements Callable<Integer> {
         }
     }
 
-    private void runTest(Class<? extends PerformanceTest> testClass, KeyValueService kvs, ValueGenerator gen) {
+    private void runTest(Class<? extends PerformanceTest> testClass, KeyValueService kvs) {
         try {
-            testClass.newInstance().run(kvs, gen);
+            PerformanceTest test = testClass.newInstance();
+            test.setup(kvs);
+            Stopwatch timer = Stopwatch.createStarted();
+            test.run();
+            timer.stop();
+            test.tearDown();
+            String msg = String.format("Test '%s' duration (millis): %d", testClass.getAnnotation(PerfTest.class).name(), timer.elapsed(TimeUnit.MILLISECONDS));
+            metricsLogger.info(msg);
+            System.out.println(msg);
+            kvs.close();
         } catch (InstantiationException e) {
             throw new RuntimeException(testClass.getCanonicalName() + " cannot be instantiated (needs a no args constructor?).", e);
         } catch (IllegalAccessException e) {
@@ -101,6 +110,7 @@ public class RunTestsCommand implements Callable<Integer> {
     private List<String> getTestArguments() {
         return Lists.newArrayList(tests.split("\\s*(,|\\s)\\s*"));
     }
+
 
     protected Set<Class<? extends PerformanceTest>> getAllTests() {
         return ALL_TESTS;

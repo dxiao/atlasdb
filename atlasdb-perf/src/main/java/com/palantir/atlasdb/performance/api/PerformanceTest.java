@@ -13,12 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.palantir.atlasdb.performance.test.api;
+package com.palantir.atlasdb.performance.api;
+
+import java.util.Optional;
 
 import com.palantir.atlasdb.keyvalue.api.KeyValueService;
 
 public interface PerformanceTest {
 
-    void run(KeyValueService kvs, ValueGenerator gen);
+    // TODO: document this
+    void run();
+
+    // TODO: document this
+    // NOTE: one day this will be the `AtlasDbServices` class from atlas-cli.
+    int setup(KeyValueService kvs);
+    int tearDown();
 
 }

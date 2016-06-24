@@ -39,11 +39,9 @@ public class AtlasPerfCli {
             if (ret instanceof Integer) {
                 System.exit((Integer) ret);
             }
-            System.exit(0);
         } catch (Exception e) {
             System.err.println(e.getMessage());
-            System.exit(1);
         }
+        System.exit(1);
     }
-
 }
